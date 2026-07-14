@@ -1,0 +1,11 @@
+/* web/testsite/style.css */
+body {
+    font-family: system-ui;
+    background: #0b1020;
+    color: #e8ecff;
+    text-align: center;
+    padding-top: 20vh;
+}
+h1 {
+    font-size: 4rem;
+}
