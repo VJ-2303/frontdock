@@ -1,0 +1,10 @@
+DROP TRIGGER IF EXISTS trg_deployments_updated ON deployments;
+DROP TRIGGER IF EXISTS trg_projects_updatedON projects;
+DROP TRIGGER IF EXISTS trg_users_updatedON users;
+DROP FUNCTION IF EXISTS set_updated_at();
+ALTER TABLE projects DROP CONSTRAINT IF EXISTS fk_projects_active_deployment;
+DROP TABLE IF EXISTS deployments;
+DROP TABLE IF EXISTS projects;
+DROP TABLE IF EXISTS password_reset_tokens;
+DROP TABLE IF EXISTS email_verification_tokens;
+DROP TABLE IF EXISTS users;
