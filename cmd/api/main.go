@@ -13,6 +13,7 @@ import (
 	"github.com/VJ-2303/frontdock/internal/config"
 	"github.com/VJ-2303/frontdock/internal/database"
 	"github.com/VJ-2303/frontdock/internal/httpx"
+	"github.com/VJ-2303/frontdock/internal/queue"
 	"github.com/VJ-2303/frontdock/internal/users"
 	"github.com/joho/godotenv"
 )
@@ -42,6 +43,12 @@ func run() error {
 	}
 	defer pool.Close()
 
+	publisher, err := queue.NewPublisher(cfg.RabbitURL)
+	if err != nil {
+		return err
+	}
+	defer publisher.Close()
+
 	usersStore := users.NewStore(pool)
 	userHandler := users.NewHandler(usersStore, cfg)
 
@@ -53,6 +60,26 @@ func run() error {
 	// Auth Routes
 	mux.HandleFunc("POST /auth/register", userHandler.Register)
 	mux.HandleFunc("POST /auth/login", userHandler.Login)
+
+	mux.HandleFunc("POST /debug/email", func(w http.ResponseWriter, r *http.Request) {
+		err := publisher.Publish(r.Context(), queue.RoutingEmailSend, queue.EmailMessage{
+			Type:     "email.send",
+			To:       "you@example.com",
+			Template: "deploy_success",
+			Data: map[string]any{
+				"ProjectName": "test Project",
+				"Subdomain":   "testdomain",
+				"SiteDomain":  "testsite",
+				"Version":     1,
+				"FileCount":   3,
+			},
+		})
+		if err != nil {
+			httpx.Error(w, http.StatusInternalServerError, "publish_failed", err.Error())
+			return
+		}
+		w.WriteHeader(202)
+	})
 
 	srv := &http.Server{
 		Addr:              cfg.APIHTTPAddr,
