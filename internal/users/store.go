@@ -24,8 +24,9 @@ func (u *User) isVerified() bool {
 }
 
 var (
-	ErrNotFound   = errors.New("user not found")
-	ErrEmailTaken = errors.New("email already taken")
+	ErrNotFound                 = errors.New("user not found")
+	ErrEmailTaken               = errors.New("email already taken")
+	ErrVerificationTokenInvalid = errors.New("verification token is invalid")
 )
 
 type Store struct {

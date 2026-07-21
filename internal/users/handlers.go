@@ -4,21 +4,25 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/VJ-2303/frontdock/internal/auth"
 	"github.com/VJ-2303/frontdock/internal/config"
 	"github.com/VJ-2303/frontdock/internal/httpx"
+	"github.com/VJ-2303/frontdock/internal/queue"
 )
 
 type Handler struct {
 	users *Store
 	cfg   *config.Config
+	pub   *queue.Publisher
 }
 
-func NewHandler(user *Store, cfg *config.Config) *Handler {
+func NewHandler(user *Store, cfg *config.Config, pub *queue.Publisher) *Handler {
 	return &Handler{
 		users: user,
 		cfg:   cfg,
+		pub:   pub,
 	}
 }
 
@@ -55,6 +59,30 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	raw, hash, err := auth.NewToken()
+	if err != nil {
+		httpx.Error(w, http.StatusInternalServerError, "internal_error", "could not create verification token")
+		return
+	}
+
+	if err := h.users.CreateVerificationToken(r.Context(), u.ID, hash, time.Hour*24); err != nil {
+		httpx.Error(w, http.StatusInternalServerError, "internal_error", "could not create verification token")
+		return
+	}
+
+	if err := h.pub.Publish(r.Context(), queue.RoutingEmailSend, queue.EmailMessage{
+		Type:     "email.send",
+		To:       u.Email,
+		Template: "verify",
+		Data: map[string]any{
+			"PublicAPIURL": h.cfg.PublicAPIURL,
+			"Token":        raw,
+		},
+	}); err != nil {
+		httpx.Error(w, http.StatusInternalServerError, "internal_error", "could not create verification token")
+		return
+	}
+
 	httpx.JSON(w, http.StatusCreated, map[string]any{
 		"user_id":    u.ID,
 		"user_email": u.Email,
@@ -87,4 +115,35 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		"token": token,
 		"user":  map[string]any{"id": u.ID, "email": u.Email},
 	})
+}
+
+func (h *Handler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
+	token := r.URL.Query().Get("token")
+	if token == "" {
+		httpx.Error(w, http.StatusBadRequest, "verification_token_missing", "Verification token is missing in the email")
+		return
+	}
+	hash := auth.HashToken(token)
+
+	id, err := h.users.ConsumeVerificationToken(r.Context(), hash)
+	if err != nil {
+		if errors.Is(err, ErrVerificationTokenInvalid) {
+			httpx.Error(w, http.StatusUnauthorized, "invalid_verification_token", "verification is invalid it may be wrong or expired")
+		} else {
+			httpx.Error(w, http.StatusInternalServerError, "internal_error", "please try again later")
+		}
+		return
+	}
+	jwtToken, err := auth.IssueToken(h.cfg.JWTSecret, id, true, h.cfg.JWTTTL)
+	if err != nil {
+		httpx.Error(w, 500, "internal_error", "could not issue token")
+		return
+	}
+	httpx.JSON(
+		w, http.StatusOK,
+		map[string]any{
+			"token":   jwtToken,
+			"message": "Email Verified Successfully, you can login now",
+		},
+	)
 }

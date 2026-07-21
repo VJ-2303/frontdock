@@ -50,7 +50,7 @@ func run() error {
 	defer publisher.Close()
 
 	usersStore := users.NewStore(pool)
-	userHandler := users.NewHandler(usersStore, cfg)
+	userHandler := users.NewHandler(usersStore, cfg, publisher)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -60,26 +60,7 @@ func run() error {
 	// Auth Routes
 	mux.HandleFunc("POST /auth/register", userHandler.Register)
 	mux.HandleFunc("POST /auth/login", userHandler.Login)
-
-	mux.HandleFunc("POST /debug/email", func(w http.ResponseWriter, r *http.Request) {
-		err := publisher.Publish(r.Context(), queue.RoutingEmailSend, queue.EmailMessage{
-			Type:     "email.send",
-			To:       "you@example.com",
-			Template: "deploy_success",
-			Data: map[string]any{
-				"ProjectName": "test Project",
-				"Subdomain":   "testdomain",
-				"SiteDomain":  "testsite",
-				"Version":     1,
-				"FileCount":   3,
-			},
-		})
-		if err != nil {
-			httpx.Error(w, http.StatusInternalServerError, "publish_failed", err.Error())
-			return
-		}
-		w.WriteHeader(202)
-	})
+	mux.HandleFunc("GET /auth/verify", userHandler.VerifyEmail)
 
 	srv := &http.Server{
 		Addr:              cfg.APIHTTPAddr,

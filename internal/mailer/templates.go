@@ -49,7 +49,7 @@ Please verify your email address before continuing.
 
 <div style="text-align:center;margin:35px 0;">
 
-<a href="{{.VerificationURL}}"
+<a href="{{.PublicAPIURL}}/auth/verify?token={{.Token}}"
 style="background:#2563eb;
 color:white;
 padding:14px 28px;
@@ -63,10 +63,6 @@ Verify Email
 
 <p>
 If the button doesn't work, copy this link into your browser:
-</p>
-
-<p style="word-break:break-all;">
-{{.VerificationURL}}
 </p>
 </div>
 </div>
