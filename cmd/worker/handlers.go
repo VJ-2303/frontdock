@@ -21,9 +21,6 @@ func emailHandler(m *mailer.Mailer, cfg *config.Config) queue.HandlerFunc {
 			return queue.Permanent(err)
 		}
 
-		if err := m.Send(msg.To, subject, html); err != nil {
-			return fmt.Errorf("smtp send to %s: %w", msg.To, err)
-		}
-		return nil
+		return m.Send(msg.To, subject, html)
 	}
 }
