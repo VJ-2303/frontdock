@@ -20,7 +20,7 @@ func RequireAuth(secret []byte) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			h := r.Header.Get("Authorization")
-			raw, ok := strings.CutPrefix(h, "bearer ")
+			raw, ok := strings.CutPrefix(h, "Bearer ")
 			if !ok || raw == "" {
 				Error(w, http.StatusUnauthorized, "unauthorized", "missing bearer token")
 				return

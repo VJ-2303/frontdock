@@ -12,7 +12,7 @@ import (
 
 	"github.com/VJ-2303/frontdock/internal/config"
 	"github.com/VJ-2303/frontdock/internal/database"
-	"github.com/VJ-2303/frontdock/internal/httpx"
+	"github.com/VJ-2303/frontdock/internal/projects"
 	"github.com/VJ-2303/frontdock/internal/queue"
 	"github.com/VJ-2303/frontdock/internal/users"
 	"github.com/joho/godotenv"
@@ -52,19 +52,12 @@ func run() error {
 	usersStore := users.NewStore(pool)
 	userHandler := users.NewHandler(usersStore, cfg, publisher)
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
-		httpx.JSON(w, http.StatusOK, map[string]string{"status": "ok"})
-	})
-
-	// Auth Routes
-	mux.HandleFunc("POST /auth/register", userHandler.Register)
-	mux.HandleFunc("POST /auth/login", userHandler.Login)
-	mux.HandleFunc("GET /auth/verify", userHandler.VerifyEmail)
+	projectStore := projects.NewStore(pool)
+	projectHandler := projects.NewHandler(projectStore)
 
 	srv := &http.Server{
 		Addr:              cfg.APIHTTPAddr,
-		Handler:           mux,
+		Handler:           Routes(cfg, userHandler, projectHandler),
 		ReadHeaderTimeout: 5 * time.Second,
 		IdleTimeout:       60 * time.Second,
 	}
