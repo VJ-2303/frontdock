@@ -13,12 +13,12 @@ import (
 
 type Project struct {
 	ID                 uuid.UUID `json:"id"`
-	UserID             uuid.UUID `json:"user_id"`
+	UserID             uuid.UUID `json:"user_id ,omitzero"`
 	Name               string    `json:"name"`
 	Subdomain          string    `json:"subdomain"`
-	ActiveDeploymentID uuid.UUID `json:"active_deployment_id"`
+	ActiveDeploymentID uuid.UUID `json:"active_deployment_id,omitzero"`
 	CreatedAt          time.Time `json:"created_at"`
-	UpdatedAt          time.Time `json:"updated_at"`
+	UpdatedAt          time.Time `json:"updated_at ,omitzero"`
 }
 
 var (
@@ -81,4 +81,33 @@ func (s *Store) GetOwnedByID(ctx context.Context, id uuid.UUID, userID uuid.UUID
 		return nil, err
 	}
 	return &p, nil
+}
+
+func (s *Store) GetAllOwned(ctx context.Context, userID uuid.UUID) ([]*Project, error) {
+	const q = `
+		SELECT id, name, subdomain, created_at
+		FROM projects
+		WHERE user_id = $1
+	`
+	var projects []*Project
+
+	rows, err := s.db.Query(ctx, q, userID)
+	defer rows.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	for rows.Next() {
+		var p Project
+		err := rows.Scan(&p.ID, &p.Name, &p.Subdomain, &p.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		projects = append(projects, &p)
+	}
+	err = rows.Err()
+	if err != nil {
+		return nil, err
+	}
+	return projects, nil
 }

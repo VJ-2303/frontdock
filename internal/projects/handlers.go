@@ -100,3 +100,14 @@ func (h *Handler) GetProjectHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	httpx.JSON(w, http.StatusOK, p)
 }
+
+func (h *Handler) GetAllProjectHandler(w http.ResponseWriter, r *http.Request) {
+	u, _ := httpx.UserFrom(r.Context())
+
+	projects, err := h.projects.GetAllOwned(r.Context(), u.ID)
+	if err != nil {
+		httpx.Error(w, http.StatusInternalServerError, "internal_server", "the server encountered an error")
+		return
+	}
+	httpx.JSON(w, http.StatusOK, projects)
+}

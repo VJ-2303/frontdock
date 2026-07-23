@@ -24,6 +24,7 @@ func Routes(cfg *config.Config, userHandler *users.Handler, projectHandler *proj
 
 	mux.Handle("POST /projects", verified(projectHandler.CreateProjects))
 	mux.Handle("GET /projects/{id}", verified(projectHandler.GetProjectHandler))
+	mux.Handle("GET /projects", verified(projectHandler.GetAllProjectHandler))
 
 	mux.Handle("POST /projects/{id}/deployments", verified(deploymentHandler.CreateDeplyment))
 
