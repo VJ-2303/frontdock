@@ -4,12 +4,13 @@ import (
 	"net/http"
 
 	"github.com/VJ-2303/frontdock/internal/config"
+	"github.com/VJ-2303/frontdock/internal/deployments"
 	"github.com/VJ-2303/frontdock/internal/httpx"
 	"github.com/VJ-2303/frontdock/internal/projects"
 	"github.com/VJ-2303/frontdock/internal/users"
 )
 
-func Routes(cfg *config.Config, userHandler *users.Handler, projectHandler *projects.Handler) http.Handler {
+func Routes(cfg *config.Config, userHandler *users.Handler, projectHandler *projects.Handler, deploymentHandler *deployments.Handler) http.Handler {
 	mux := http.NewServeMux()
 
 	verified := func(h http.HandlerFunc) http.Handler {
@@ -23,6 +24,8 @@ func Routes(cfg *config.Config, userHandler *users.Handler, projectHandler *proj
 
 	mux.Handle("POST /projects", verified(projectHandler.CreateProjects))
 	mux.Handle("GET /projects/{id}", verified(projectHandler.GetProjectHandler))
+
+	mux.Handle("POST /projects/{id}/deployments", verified(deploymentHandler.CreateDeplyment))
 
 	return mux
 }

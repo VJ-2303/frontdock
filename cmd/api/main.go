@@ -12,8 +12,10 @@ import (
 
 	"github.com/VJ-2303/frontdock/internal/config"
 	"github.com/VJ-2303/frontdock/internal/database"
+	"github.com/VJ-2303/frontdock/internal/deployments"
 	"github.com/VJ-2303/frontdock/internal/projects"
 	"github.com/VJ-2303/frontdock/internal/queue"
+	"github.com/VJ-2303/frontdock/internal/storage"
 	"github.com/VJ-2303/frontdock/internal/users"
 	"github.com/joho/godotenv"
 )
@@ -49,15 +51,23 @@ func run() error {
 	}
 	defer publisher.Close()
 
+	storage, err := storage.New(cfg.MinIOEndpoint, cfg.MinIOAccessKey, cfg.MinIOSecretkey, cfg.MinIOUseSSL, cfg.BucketUploads, cfg.BucketSites)
+	if err != nil {
+		return err
+	}
+
 	usersStore := users.NewStore(pool)
 	userHandler := users.NewHandler(usersStore, cfg, publisher)
 
 	projectStore := projects.NewStore(pool)
 	projectHandler := projects.NewHandler(projectStore)
 
+	deploymentStore := deployments.NewStore(pool)
+	deploymentHandler := deployments.NewHandler(deploymentStore, projectStore, cfg, storage, publisher)
+
 	srv := &http.Server{
 		Addr:              cfg.APIHTTPAddr,
-		Handler:           Routes(cfg, userHandler, projectHandler),
+		Handler:           Routes(cfg, userHandler, projectHandler, deploymentHandler),
 		ReadHeaderTimeout: 5 * time.Second,
 		IdleTimeout:       60 * time.Second,
 	}
